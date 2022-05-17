@@ -28,40 +28,33 @@ exports.messageNotification = functions.region("asia-northeast1").firestore
       if (!getUserIds || getUserIds[0].length === 1) {
         return;
       }
-      // const fetchToken = async () => {
-      //   const exceptSenderIds = getUserIds[0].filter((id: any) => id !== userId);
-      //   for (let i = 0; i < exceptSenderIds.length; i++) {
-      //     const userId = exceptSenderIds[i];
-      //     const doc = await usersRef.doc(userId);
-      //     const token = await (await doc.get()).data()?.expoPushToken;
-      //     return token;
-      //   }
-      // };
-      // iが２になる瞬間、配列の長さが３ではないので、undefinedになる→エラーが起きる。だから、
-      for (let i = 0; i < getUserIds[0].length; i++) {
-        const checkUsers = getUserIds[0][i].includes(userId);
-        if (!checkUsers) {
-          const messages: ExpoPushMessage[] = [];
-          for (let i = 0; i < getUserIds[0].length; i++) {
-            const exceptSenderIds = getUserIds[0].filter((id: any) => id !== userId);
-            const userIds = exceptSenderIds[i];
-            if (userIds === undefined) {
-              return;
-            }
-            const doc = await usersRef.doc(userIds);
-            const token = await (await doc.get()).data()?.expoPushToken;
-            console.log(token);
-            messages.push({
-              to: token,
-              title: userNickname,
-              body: sendText,
-            });
-          }
-          try {
-            await expo.sendPushNotificationsAsync(messages);
-          } catch (error) {
-            console.error(error);
-          }
+      // 二次元配列→一次元配列
+      const allRoomUser = getUserIds.flat();
+      console.log(allRoomUser);
+      // 一回回るときになぜ２回もtokenがコンソール表示されるのか？→内部のfor文が２回回る→外のfor文が２回回るで４回表示される。これ絶対いい方法がありそう。
+      const exceptSenderIds = allRoomUser.filter((id: any) => id !== userId);
+
+      const pushMessages: ExpoPushMessage[] = [];
+      for (let i = 0; i < exceptSenderIds.length; i++) {
+        const userIds = exceptSenderIds[i];
+        console.log(userIds);
+        console.log(exceptSenderIds);
+        if (userIds === undefined) {
+          console.log(userIds);
+          return;
         }
+        const doc = await usersRef.doc(userIds);
+        const token = (await doc.get()).data()?.expoPushToken;
+        console.log(token);
+        pushMessages.push({
+          to: token,
+          title: userNickname,
+          body: sendText,
+        });
+      }
+      try {
+        await expo.sendPushNotificationsAsync(pushMessages);
+      } catch (error) {
+        console.error(error);
       }
     });
